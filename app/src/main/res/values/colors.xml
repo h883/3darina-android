@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- ゲーム画面（夜のアリーナ）に合わせた配色 -->
+    <color name="game_bg">#FF070B18</color>
+    <color name="game_accent">#FFFFC64B</color>
+    <color name="game_text">#FFE8ECF6</color>
+    <color name="game_text_dim">#FF8A93AB</color>
+</resources>

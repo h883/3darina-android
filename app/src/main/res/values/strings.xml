@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">コインアリーナ 3D</string>
+    <string name="loading">アリーナを準備中…</string>
+    <string name="offline_message">ゲームに接続できませんでした。\nインターネット接続を確認してください。</string>
+    <string name="retry">再読み込み</string>
+    <string name="press_back_again">もう一度戻るを押すと終了します</string>
+    <string name="cannot_open_link">このリンクを開けるアプリがありません</string>
+    <string name="renderer_crashed">描画がリセットされました。再読み込みします。</string>
+</resources>
