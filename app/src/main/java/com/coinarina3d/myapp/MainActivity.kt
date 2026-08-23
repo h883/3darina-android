@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -55,6 +56,9 @@ class MainActivity : ComponentActivity() {
     /** 通知から起動された場合、読み込み後にお知らせ画面を開く。 */
     private var pendingOpenNotes = false
 
+    /** バックグラウンドに回った時刻（復帰時に読み直すか判断するため）。 */
+    private var backgroundedAt = 0L
+
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* 拒否されても通常どおり遊べる */ }
 
@@ -77,11 +81,9 @@ class MainActivity : ComponentActivity() {
         setupNotices()
         pendingOpenNotes = intent?.getBooleanExtra(NoticeNotifier.EXTRA_OPEN_NOTES, false) == true
 
-        if (savedInstanceState != null) {
-            webView.restoreState(savedInstanceState)
-        } else {
-            webView.loadUrl(GameSite.START_URL)
-        }
+        // 保存したセッションを復元すると古いページのまま復帰することがあるため、常に読み直す。
+        // サイトを更新したのにアプリだけ古いまま、という状態を作らない。
+        webView.loadUrl(GameSite.START_URL)
     }
 
     // ---------------------------------------------------------------- notice
@@ -335,13 +337,9 @@ class MainActivity : ComponentActivity() {
 
     // ------------------------------------------------------------- lifecycle
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        webView.saveState(outState)
-    }
-
     override fun onPause() {
         super.onPause()
+        backgroundedAt = SystemClock.elapsedRealtime()
         webView.onPause()   // バックグラウンドで描画と JS タイマーを止める
     }
 
@@ -349,10 +347,44 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         webView.onResume()
         applyImmersiveMode()
+        reloadIfStale()
+    }
+
+    /**
+     * 長時間バックグラウンドにいた後の復帰では、ページを読み直してサイトの更新を取り込む。
+     * ただし対戦中は切断してしまうので、メニューに戻っているときだけにする。
+     */
+    private fun reloadIfStale() {
+        val awayFor = SystemClock.elapsedRealtime() - backgroundedAt
+        if (backgroundedAt == 0L || awayFor < RELOAD_AFTER_BACKGROUND_MS) return
+        backgroundedAt = 0L
+
+        webView.evaluateJavascript(MENU_VISIBLE_JS) { result ->
+            if (result?.contains("idle") == true) webView.reload()
+        }
     }
 
     override fun onDestroy() {
         webView.destroy()
         super.onDestroy()
+    }
+
+    private companion object {
+        /** これ以上バックグラウンドにいたら、復帰時に読み直す。 */
+        const val RELOAD_AFTER_BACKGROUND_MS = 10 * 60 * 1000L
+
+        /**
+         * メニュー（ログイン・ルーム選択）が見えているかを調べる。
+         * 判定できないときは busy を返し、読み直さない側に倒す。
+         */
+        const val MENU_VISIBLE_JS = """
+            (function(){
+              try {
+                var overlay = document.getElementById('overlay');
+                if (!overlay) return 'busy';
+                return getComputedStyle(overlay).display !== 'none' ? 'idle' : 'busy';
+              } catch (e) { return 'busy'; }
+            })();
+        """
     }
 }

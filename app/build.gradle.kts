@@ -1,7 +1,17 @@
 import java.time.Instant
+import java.util.Properties
 
 /** ストアに表示されるバージョン。変更のたびにここを上げる。 */
-val appVersionName = "1.3"
+val appVersionName = "1.5"
+
+/**
+ * 署名情報はリポジトリに入れず、Git 管理外の keystore.properties から読む。
+ * ファイルが無い場合は未署名でビルドする（普段の開発やデバッグビルドはこれで通る）。
+ */
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) keystorePropertiesFile.inputStream().use { load(it) }
+}
 
 /**
  * Play Console は一度使った versionCode を二度と受け付けない。
@@ -24,6 +34,17 @@ android {
         version = release(37)
     }
 
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "com.coinarina3d.myapp"
         minSdk = 24
@@ -37,6 +58,8 @@ android {
 
     buildTypes {
         release {
+            // keystore.properties があれば署名する。Play Console は未署名を受け付けない。
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
