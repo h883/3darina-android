@@ -2,7 +2,7 @@ import java.time.Instant
 import java.util.Properties
 
 /** ストアに表示されるバージョン。変更のたびにここを上げる。 */
-val appVersionName = "1.5"
+val appVersionName = "1.9"
 
 /**
  * 署名情報はリポジトリに入れず、Git 管理外の keystore.properties から読む。
@@ -50,7 +50,8 @@ android {
         minSdk = 24
         targetSdk = 36
         // デバッグビルド用の固定値。Play に上げるのはリリースビルドだけなので据え置きでよい。
-        versionCode = 1
+        // 1 のような小さい値だと、過去に入れたビルドより古いと判定されて再インストールが弾かれる。
+        versionCode = 1000
         versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -99,6 +100,13 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     // お知らせを定期チェックするバックグラウンド処理
     implementation(libs.androidx.work.runtime.ktx)
+    // アプリ内で Google アカウントを選ぶための Credential Manager
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+    // play-services 経由で fragment 1.2.5 が compile 側に来てしまい、
+    // registerForActivityResult が lint エラー（1.3.0 未満）になるため明示的に揃える
+    implementation(libs.androidx.fragment)
     testImplementation(libs.junit)
     // JVM テストでは android の org.json がスタブなので実装を足す
     testImplementation(libs.json)

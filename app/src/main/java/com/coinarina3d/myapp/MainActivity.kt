@@ -13,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
@@ -32,6 +33,18 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetCredentialResponse
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
+import androidx.lifecycle.lifecycleScope
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 /**
  * コインアリーナ 3D をフルスクリーンで遊ぶためのシェル。
@@ -58,6 +71,9 @@ class MainActivity : ComponentActivity() {
 
     /** バックグラウンドに回った時刻（復帰時に読み直すか判断するため）。 */
     private var backgroundedAt = 0L
+
+    /** アカウント選択シートの二重表示を防ぐ。 */
+    private var signInInProgress = false
 
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* 拒否されても通常どおり遊べる */ }
@@ -188,6 +204,7 @@ class MainActivity : ComponentActivity() {
 
         webView.webViewClient = GameWebViewClient()
         webView.webChromeClient = GameWebChromeClient()
+        webView.addJavascriptInterface(NativeBridge(), GoogleAuthBridge.JS_INTERFACE_NAME)
     }
 
     private inner class GameWebViewClient : WebViewClient() {
@@ -198,6 +215,11 @@ class MainActivity : ComponentActivity() {
         ): Boolean {
             val uri = request.url
             if (GameSite.isInternal(uri)) return false
+            // Google 認証ページへの遷移は外部ブラウザに出さず、アプリ内ログインに置き換える。
+            if (isGoogleAuthUrl(uri)) {
+                startGoogleSignIn()
+                return true
+            }
             openExternally(uri)
             return true
         }
@@ -213,6 +235,7 @@ class MainActivity : ComponentActivity() {
         }
 
         override fun onPageFinished(view: WebView, url: String) {
+            view.evaluateJavascript(GoogleAuthBridge.INJECTED_JS, null)
             if (pendingOpenNotes) {
                 pendingOpenNotes = false
                 openNotesInPage()
@@ -284,6 +307,87 @@ class MainActivity : ComponentActivity() {
         override fun onPermissionRequest(request: PermissionRequest) {
             request.deny()
         }
+    }
+
+    // ---------------------------------------------------------- google login
+
+    /** ページから呼ばれるネイティブ側の窓口。 */
+    private inner class NativeBridge {
+
+        /** ログインボタンのタップ（JS 側で横取り済み）。 */
+        @JavascriptInterface
+        fun signInWithGoogle() {
+            runOnUiThread { startGoogleSignIn() }
+        }
+
+        /** Firebase 側でのサインイン失敗を通知してもらう。 */
+        @JavascriptInterface
+        fun onAuthError(message: String) {
+            runOnUiThread { toastSignInFailure(message) }
+        }
+    }
+
+    private fun isGoogleAuthUrl(uri: Uri): Boolean {
+        val host = uri.host?.lowercase() ?: return false
+        if (host == "accounts.google.com") return true
+        // Firebase の認証ハンドラ（signInWithPopup / signInWithRedirect の遷移先）
+        return host.endsWith(".firebaseapp.com") && uri.path?.startsWith("/__/auth") == true
+    }
+
+    /**
+     * 端末に登録済みの Google アカウントをアプリ内のシートで選ばせ、ID トークンを取得する。
+     * ブラウザは一切開かない。
+     */
+    private fun startGoogleSignIn() {
+        if (signInInProgress) return
+        if (GoogleAuthBridge.WEB_CLIENT_ID.isBlank()) {
+            Toast.makeText(this, R.string.client_id_missing, Toast.LENGTH_LONG).show()
+            return
+        }
+        signInInProgress = true
+
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(
+                GetSignInWithGoogleOption.Builder(GoogleAuthBridge.WEB_CLIENT_ID).build()
+            )
+            .build()
+
+        lifecycleScope.launch {
+            try {
+                val response = CredentialManager.create(this@MainActivity)
+                    .getCredential(this@MainActivity, request)
+                passIdTokenToPage(response)
+            } catch (e: GetCredentialCancellationException) {
+                // ユーザーがシートを閉じただけなので何も出さない
+            } catch (e: NoCredentialException) {
+                Toast.makeText(this@MainActivity, R.string.no_google_account, Toast.LENGTH_LONG)
+                    .show()
+            } catch (e: GetCredentialException) {
+                toastSignInFailure(e.message ?: e.javaClass.simpleName)
+            } finally {
+                signInInProgress = false
+            }
+        }
+    }
+
+    private fun passIdTokenToPage(response: GetCredentialResponse) {
+        val credential = response.credential
+        if (credential !is CustomCredential ||
+            credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+        ) {
+            toastSignInFailure(credential.type)
+            return
+        }
+        val idToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
+        webView.evaluateJavascript(
+            "window.__caNativeGoogleAuth(${JSONObject.quote(idToken)})",
+            null,
+        )
+    }
+
+    private fun toastSignInFailure(reason: String) {
+        Toast.makeText(this, getString(R.string.google_signin_failed, reason), Toast.LENGTH_LONG)
+            .show()
     }
 
     // ------------------------------------------------------------ navigation
