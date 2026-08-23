@@ -6,4 +6,7 @@
     <string name="press_back_again">もう一度戻るを押すと終了します</string>
     <string name="cannot_open_link">このリンクを開けるアプリがありません</string>
     <string name="renderer_crashed">描画がリセットされました。再読み込みします。</string>
+    <string name="notice_channel_name">お知らせ</string>
+    <string name="notice_channel_description">アップデートや新ステージなどのお知らせを通知します。</string>
+    <string name="notice_default_title">コインアリーナ 3D からのお知らせ</string>
 </resources>

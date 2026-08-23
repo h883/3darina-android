@@ -1,4 +1,4 @@
-package com.example.koinarima_1.ui.theme
+package com.coinarina3d.myapp.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

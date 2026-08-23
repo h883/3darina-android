@@ -4,17 +4,17 @@ plugins {
 }
 
 android {
-    namespace = "com.example.koinarima_1"
+    namespace = "com.coinarina3d.myapp"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.example.koinarima_1"
+        applicationId = "com.coinarina3d.myapp"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -47,7 +47,11 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    // お知らせを定期チェックするバックグラウンド処理
+    implementation(libs.androidx.work.runtime.ktx)
     testImplementation(libs.junit)
+    // JVM テストでは android の org.json がスタブなので実装を足す
+    testImplementation(libs.json)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)

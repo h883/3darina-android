@@ -1,4 +1,4 @@
-package com.example.koinarima_1
+package com.coinarina3d.myapp
 
 import android.net.Uri
 import android.webkit.WebResourceResponse

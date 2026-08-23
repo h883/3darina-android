@@ -1,4 +1,4 @@
-package com.example.koinarima_1.ui.theme
+package com.coinarina3d.myapp.ui.theme
 
 import android.app.Activity
 import android.os.Build

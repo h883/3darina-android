@@ -1,5 +1,6 @@
-package com.example.koinarima_1
+package com.coinarina3d.myapp
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -26,6 +27,7 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -50,6 +52,12 @@ class MainActivity : ComponentActivity() {
     private var loadFailed = false
     private var lastBackPressAt = 0L
 
+    /** 通知から起動された場合、読み込み後にお知らせ画面を開く。 */
+    private var pendingOpenNotes = false
+
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* 拒否されても通常どおり遊べる */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -66,11 +74,50 @@ class MainActivity : ComponentActivity() {
 
         findViewById<Button>(R.id.retryButton).setOnClickListener { reload() }
 
+        setupNotices()
+        pendingOpenNotes = intent?.getBooleanExtra(NoticeNotifier.EXTRA_OPEN_NOTES, false) == true
+
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState)
         } else {
             webView.loadUrl(GameSite.START_URL)
         }
+    }
+
+    // ---------------------------------------------------------------- notice
+
+    /** お知らせの定期チェックを仕掛け、必要なら通知の許可を求める。 */
+    private fun setupNotices() {
+        NoticeNotifier.ensureChannel(this)
+        NoticeWorker.schedule(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !NoticeNotifier.hasPermission(this)
+        ) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra(NoticeNotifier.EXTRA_OPEN_NOTES, false)) openNotesInPage()
+    }
+
+    /** ページ側のお知らせボタンを押す。まだ描画されていないこともあるので少し待つ。 */
+    private fun openNotesInPage() {
+        webView.evaluateJavascript(
+            """
+            (function(){
+              var n = 0;
+              var timer = setInterval(function(){
+                var btn = document.getElementById('openNotes');
+                if (btn) { clearInterval(timer); btn.click(); }
+                else if (++n > 40) { clearInterval(timer); }
+              }, 250);
+            })();
+            """.trimIndent(),
+            null,
+        )
     }
 
     // ---------------------------------------------------------------- window
@@ -164,6 +211,10 @@ class MainActivity : ComponentActivity() {
         }
 
         override fun onPageFinished(view: WebView, url: String) {
+            if (pendingOpenNotes) {
+                pendingOpenNotes = false
+                openNotesInPage()
+            }
             if (!loadFailed) {
                 loadingView.visibility = View.GONE
                 errorView.visibility = View.GONE

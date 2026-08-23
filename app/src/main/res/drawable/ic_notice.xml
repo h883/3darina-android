@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 通知バー用のアイコン。白のシルエットで描く必要がある。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFFFF">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8 8,3.59 8,8 -3.59,8 -8,8z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12.9,11.2c-1.6,-0.42 -2.1,-0.85 -2.1,-1.51 0,-0.76 0.7,-1.29 1.88,-1.29 1.24,0 1.7,0.59 1.74,1.46h1.54c-0.05,-1.2 -0.78,-2.3 -2.24,-2.66V6h-2.1v1.19c-1.35,0.29 -2.44,1.17 -2.44,2.52 0,1.61 1.33,2.41 3.27,2.88 1.74,0.42 2.09,1.03 2.09,1.68 0,0.48 -0.34,1.25 -1.88,1.25 -1.43,0 -2,-0.64 -2.07,-1.46H8.04c0.09,1.53 1.23,2.39 2.57,2.67V18h2.1v-1.25c1.36,-0.26 2.44,-1.05 2.44,-2.484 0,-1.98 -1.7,-2.66 -3.29,-3.07z" />
+</vector>
