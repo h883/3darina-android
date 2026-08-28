@@ -9,4 +9,7 @@
     <string name="notice_channel_name">お知らせ</string>
     <string name="notice_channel_description">アップデートや新ステージなどのお知らせを通知します。</string>
     <string name="notice_default_title">コインアリーナ 3D からのお知らせ</string>
+    <string name="google_signin_failed">Google ログインに失敗しました（%1$s）</string>
+    <string name="no_google_account">この端末に Google アカウントが登録されていません。端末の設定から追加してください。</string>
+    <string name="client_id_missing">Google ログインの設定が未完了です（ウェブクライアント ID 未設定）。</string>
 </resources>
